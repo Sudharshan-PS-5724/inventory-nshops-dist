@@ -1,0 +1,26 @@
+# Dependencies and builds
+node_modules/
+dist/
+coverage/
+.expo/
+android/.gradle/
+ios/Pods/
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Local state and generated artifacts
+*.sqlite
+*.sqlite-*
+reports/
+uploads/
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
