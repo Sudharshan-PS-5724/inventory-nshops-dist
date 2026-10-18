@@ -1,8 +1,9 @@
 import { z } from 'zod';
+import { isTimezone } from '../../shared/business-date.js';
 
 export const createShopInputSchema = z.object({
   name: z.string().trim().min(1).max(160),
-  timezone: z.string().trim().min(1).max(64),
+  timezone: z.string().trim().min(1).max(64).refine(isTimezone, 'Use a valid IANA timezone.'),
 });
 
 export const createShopUserInputSchema = z.object({

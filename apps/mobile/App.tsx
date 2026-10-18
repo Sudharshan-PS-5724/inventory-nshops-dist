@@ -1,6 +1,8 @@
 import { StatusBar } from "expo-status-bar";
 import { useFonts } from "expo-font";
 import { useState } from "react";
+import { LiveApp } from './src/live/LiveApp';
+import { hasLiveConfiguration } from './src/auth/supabase';
 import {
   NunitoSans_400Regular,
   NunitoSans_600SemiBold,
@@ -255,6 +257,12 @@ function FormCard({
 }
 
 export default function App() {
+  const [fallback, setFallback] = useState(false);
+  if (hasLiveConfiguration && !fallback) return <LiveApp onPreview={() => setFallback(true)} />;
+  return <View style={{ flex: 1 }}><Pressable accessibilityRole={fallback ? 'button' : 'text'} disabled={!fallback} onPress={() => setFallback(false)} style={{ padding: 18, backgroundColor: '#CCFF33' }}><Text style={{ color: '#004B23' }}>{fallback ? 'Demo data only. Tap to reconnect to the live workspace.' : 'Demo data only. Configure Supabase and the API to use live inventory.'}</Text></Pressable><PreviewApp /></View>;
+}
+
+function PreviewApp() {
   const [fontsLoaded] = useFonts({
     NunitoSans_400Regular,
     NunitoSans_600SemiBold,
@@ -411,7 +419,7 @@ export default function App() {
                 style={styles.avatar}
                 onPress={() => setProfileOpen(true)}
               >
-                <Text style={styles.avatarText}>SA</Text>
+                <Text style={styles.avatarText}>PS</Text>
               </Pressable>
             </View>
           )}
@@ -618,6 +626,8 @@ function Home({
           <Image
             source={{ uri: produceImages.p2 }}
             style={styles.promoImage}
+            accessibilityLabel="Fresh tomatoes"
+            resizeMode="cover"
           />
         </Pressable>
         <Pressable
@@ -632,6 +642,8 @@ function Home({
           <Image
             source={{ uri: produceImages.p6 }}
             style={styles.promoImage}
+            accessibilityLabel="Fresh apples"
+            resizeMode="cover"
           />
         </Pressable>
       </View>
@@ -685,6 +697,8 @@ function Home({
               <Image
                 source={{ uri: produceImages[item.id] }}
                 style={styles.homeProductImage}
+                accessibilityLabel={`${displayNames[item.id]} product image`}
+                resizeMode="cover"
               />
               {item.status === "Low" && (
                 <Text style={styles.homeLowBadge}>Low stock</Text>
@@ -1711,7 +1725,7 @@ function Account({
     <>
       <View style={styles.accountHero}>
         <View style={styles.bigAvatar}>
-          <Text style={styles.avatarText}>SA</Text>
+          <Text style={styles.avatarText}>PS</Text>
         </View>
         <Text style={styles.accountName}>PS</Text>
         <Text style={styles.accountRole}>
@@ -1807,9 +1821,9 @@ function createStyles(colors: AppColors) {
     },
     marketPage: { backgroundColor: colors.canvas },
     marketHeader: {
-      minHeight: 56,
-      paddingHorizontal: 10,
-      paddingVertical: 5,
+      minHeight: 62,
+      paddingHorizontal: 14,
+      paddingVertical: 7,
       backgroundColor: colors.surface,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderColor: colors.line,
@@ -1834,13 +1848,13 @@ function createStyles(colors: AppColors) {
     marketTitle: {
       color: colors.ink,
       fontFamily: typeface.extraBold,
-      fontSize: 14,
+      fontSize: 15,
     },
     marketSubtitle: {
       color: colors.inkMuted,
       fontFamily: typeface.regular,
-      fontSize: 8,
-      marginTop: 1,
+      fontSize: 10,
+      marginTop: 2,
     },
     offersButton: {
       flexDirection: "row",
@@ -1863,7 +1877,7 @@ function createStyles(colors: AppColors) {
     offersText: {
       color: colors.ink,
       fontFamily: typeface.semibold,
-      fontSize: 11,
+      fontSize: 12,
     },
     logo: {
       width: 36,
@@ -1910,13 +1924,13 @@ function createStyles(colors: AppColors) {
     },
     scroll: { padding: spacing.md, paddingBottom: 100 },
     marketScroll: {
-      paddingHorizontal: 9,
-      paddingTop: 7,
+      paddingHorizontal: 12,
+      paddingTop: 12,
       paddingBottom: 88,
       backgroundColor: colors.canvas,
     },
     homeSearch: {
-      height: 43,
+      height: 48,
       flexDirection: "row",
       alignItems: "center",
       paddingHorizontal: 10,
@@ -1924,7 +1938,7 @@ function createStyles(colors: AppColors) {
       backgroundColor: colors.surface,
       borderWidth: 1,
       borderColor: colors.line,
-      borderRadius: 9,
+      borderRadius: 12,
     },
     homeSearchIcon: {
       color: colors.green,
@@ -1937,7 +1951,7 @@ function createStyles(colors: AppColors) {
       flex: 1,
       color: colors.ink,
       fontFamily: typeface.regular,
-      fontSize: 12,
+      fontSize: 13,
       paddingVertical: 0,
     },
     homeSearchFilter: {
@@ -1946,28 +1960,28 @@ function createStyles(colors: AppColors) {
       fontSize: 17,
       paddingHorizontal: 4,
     },
-    marketPromos: { flexDirection: "row", gap: 7 },
+    marketPromos: { flexDirection: "row", gap: 10 },
     marketPromo: {
       flex: 1,
-      height: 91,
-      borderRadius: 5,
-      padding: 8,
+      height: 108,
+      borderRadius: 14,
+      padding: 12,
       overflow: "hidden",
     },
     vegetablePromo: { backgroundColor: colors.green },
-    fruitPromo: { backgroundColor: colors.blue },
+    fruitPromo: { backgroundColor: colors.limeDeep },
     promoTitle: {
       color: colors.surface,
       fontFamily: typeface.extraBold,
-      fontSize: 15,
+      fontSize: 17,
       maxWidth: "70%",
     },
     promoCopy: {
       color: colors.surface,
       fontFamily: typeface.regular,
-      fontSize: 10,
-      lineHeight: 10,
-      marginTop: 2,
+      fontSize: 11,
+      lineHeight: 14,
+      marginTop: 4,
       maxWidth: "68%",
     },
     promoSmall: {
@@ -1993,23 +2007,23 @@ function createStyles(colors: AppColors) {
       lineHeight: 16,
     },
     promoImage: {
-      width: 57,
-      height: 45,
+      width: 78,
+      height: 62,
       position: "absolute",
       right: 0,
       bottom: 0,
-      borderTopLeftRadius: 14,
+      borderTopLeftRadius: 18,
     },
     categoryRow: {
       flexDirection: "row",
       justifyContent: "space-between",
-      marginTop: 8,
+      marginTop: 14,
     },
     categoryItem: { width: "24%", alignItems: "center" },
     categoryArt: {
-      width: 41,
-      height: 41,
-      borderRadius: 7,
+      width: 48,
+      height: 48,
+      borderRadius: 12,
       borderWidth: 1,
       borderColor: colors.surface,
       alignItems: "center",
@@ -2023,15 +2037,15 @@ function createStyles(colors: AppColors) {
     categoryLabel: {
       color: colors.ink,
       fontFamily: typeface.bold,
-      fontSize: 10,
-      lineHeight: 12,
+      fontSize: 11,
+      lineHeight: 14,
       textAlign: "center",
       marginTop: 4,
       minHeight: 20,
     },
     produceHeading: {
-      marginTop: 17,
-      marginBottom: 7,
+      marginTop: 22,
+      marginBottom: 10,
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
@@ -2039,19 +2053,19 @@ function createStyles(colors: AppColors) {
     produceHeadingText: {
       color: colors.ink,
       fontFamily: typeface.extraBold,
-      fontSize: 18,
+      fontSize: 21,
     },
     produceHeadingSub: {
       color: colors.inkMuted,
       fontFamily: typeface.regular,
-      fontSize: 10,
+      fontSize: 11,
       marginTop: 2,
     },
     seeAllButton: { flexDirection: "row", alignItems: "center", gap: 4 },
     seeAllText: {
       color: colors.green,
       fontFamily: typeface.extraBold,
-      fontSize: 8,
+      fontSize: 10,
       fontWeight: "700",
     },
     seeAllArrow: {
@@ -2094,16 +2108,16 @@ function createStyles(colors: AppColors) {
       flexDirection: "row",
       flexWrap: "wrap",
       justifyContent: "space-between",
-      rowGap: 9,
-      marginBottom: 16,
+      rowGap: 12,
+      marginBottom: 20,
     },
     homeProductCard: {
       width: "48.7%",
-      padding: 7,
+      padding: 9,
       backgroundColor: colors.surface,
       borderWidth: 1,
       borderColor: colors.line,
-      borderRadius: 8,
+      borderRadius: 14,
       overflow: "hidden",
       shadowColor: colors.ink,
       shadowOpacity: 0.06,
@@ -2113,8 +2127,8 @@ function createStyles(colors: AppColors) {
     },
     homeProductImageWrap: {
       width: "100%",
-      height: 98,
-      borderRadius: 6,
+      height: 116,
+      borderRadius: 10,
       overflow: "hidden",
       backgroundColor: colors.surfaceMuted,
     },
@@ -2142,7 +2156,7 @@ function createStyles(colors: AppColors) {
     homeProductSubtitle: {
       color: colors.inkMuted,
       fontFamily: typeface.regular,
-      fontSize: 9,
+      fontSize: 11,
       marginTop: 2,
     },
     homeProductFooter: {
@@ -2154,20 +2168,20 @@ function createStyles(colors: AppColors) {
     homeProductPrice: {
       color: colors.ink,
       fontFamily: typeface.extraBold,
-      fontSize: 12,
+      fontSize: 13,
       fontWeight: "800",
     },
     homeProductUnit: {
       color: colors.inkMuted,
-      fontSize: 9,
+      fontSize: 10,
       fontFamily: typeface.regular,
     },
     homeProductAdd: {
-      width: 25,
-      height: 23,
+      width: 29,
+      height: 27,
       alignItems: "center",
       justifyContent: "center",
-      borderRadius: 5,
+      borderRadius: 8,
       borderWidth: 1,
       borderColor: colors.green,
       backgroundColor: colors.greenSoft,

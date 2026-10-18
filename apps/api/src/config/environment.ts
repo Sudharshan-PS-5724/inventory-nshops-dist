@@ -7,7 +7,10 @@ const environmentSchema = z.object({
   DATABASE_URL: z.string().url(),
   DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(20).default(5),
   CORS_ORIGIN: z.string().url(),
-  SENTRY_DSN: z.string().url().optional(),
+  SENTRY_DSN: z.preprocess(
+    (value) => (value === '' ? undefined : value),
+    z.string().url().optional(),
+  ),
   SUPABASE_JWT_ISSUER: z.string().url(),
   SUPABASE_JWKS_URL: z.string().url(),
   SUPABASE_JWT_AUDIENCE: z.string().min(1).default('authenticated'),

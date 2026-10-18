@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { and, eq, sql } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
+import { validateLocationDate } from '../shared/business-date.js';
 import type { AuthenticatedActor } from '../access/domain/access-policy.js';
 import {
   inventoryLocations,
@@ -80,6 +81,7 @@ export class WastageService {
       throw new NotFoundException('Active product was not found.');
     }
 
+    await validateLocationDate(transaction, location.shopId, input.businessDate, input.occurredAt);
     const lockKey = `${input.locationId}:${input.productId}:${input.businessDate}`;
     await transaction.execute(sql`select pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))`);
     await this.assertSufficientInventory(transaction, input);

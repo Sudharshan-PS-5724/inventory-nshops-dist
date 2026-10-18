@@ -22,7 +22,7 @@
 2. Apply and test the migration in staging.
 3. Take/verify backup and review migration rollback plan.
 4. Deploy a new Cloud Run revision without immediately routing all traffic.
-5. Check `/health/ready`, error metrics, and a smoke-test API workflow.
+5. Check `/api/v1/health/ready`, error metrics, and a smoke-test API workflow.
 6. Route traffic gradually or fully after acceptance.
 7. Run post-deploy migration/version and collector compatibility checks.
 

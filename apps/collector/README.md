@@ -7,13 +7,13 @@ This collector is a deliberately small Python standard-library process for a sho
 The supplied protocol evidence documents a TCP statement request on port `4001` using `!0J####A\r\n\x03`. The exact response schema, record cursor behaviour, receipt grouping, model, and firmware still require a live-machine capture. Therefore:
 
 - `protocol.py` can issue only the documented read request.
-- Raw replies are persisted before upload.
+- The outbox can persist raw replies and rejects identity collisions. The diagnostic CLI prints evidence; it does not automatically write to the outbox. A polling/upload runner is not implemented.
 - No product, quantity, price, or sale is inferred from unverified bytes.
 - `parse_statement_reply` raises until a verified response fixture and parser are approved.
 
 This is intentional: uploading made-up sales is worse than delaying ingestion.
 
-## Required environment
+## Planned runner environment (not consumed by the current diagnostic CLI)
 
 `DAHUA_HOST`, `DAHUA_PORT` (default `4001`), `COLLECTOR_DEVICE_ID`, `COLLECTOR_OUTBOX_PATH`, `API_BASE_URL`, and `COLLECTOR_INGEST_TOKEN`.
 

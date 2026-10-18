@@ -4,10 +4,7 @@ export interface MobileSession {
   readonly mode: "fallback" | "live";
 }
 
-export const hasSupabaseConfiguration = Boolean(
-  process.env.EXPO_PUBLIC_SUPABASE_URL &&
-  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
-);
+export { hasLiveConfiguration as hasSupabaseConfiguration } from "../auth/config";
 
 export function createFallbackSession(): MobileSession {
   return {
@@ -17,10 +14,13 @@ export function createFallbackSession(): MobileSession {
   };
 }
 
-export function createLiveSession(email: string | undefined): MobileSession {
+export function createLiveSession(
+  email: string | undefined,
+  serverRole: "ADMIN" | "SHOP_USER",
+): MobileSession {
   return {
     userName: email?.split("@")[0] || "Account",
-    role: "Administrator",
+    role: serverRole === "ADMIN" ? "Administrator" : "Shop user",
     mode: "live",
   };
 }

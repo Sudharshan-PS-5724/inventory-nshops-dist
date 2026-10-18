@@ -1,10 +1,15 @@
 import { z } from 'zod';
-import { normalizeProductCode, validateRecoveryBasisPoints } from '../domain/product-rules.js';
+import { validateRecoveryBasisPoints } from '../domain/product-rules.js';
+import { exactInteger } from '../../shared/exact-integer.js';
 
 export const createProductInputSchema = z.object({
   name: z.string().trim().min(1).max(160),
-  productCode: z.string().transform(normalizeProductCode),
-  recoveryBasisPoints: z.coerce
+  productCode: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .regex(/^[A-Z0-9_-]{1,64}$/),
+  recoveryBasisPoints: z
     .number()
     .int()
     .min(0)
@@ -16,7 +21,7 @@ export const createProductInputSchema = z.object({
         context.addIssue({ code: 'custom', message: (error as Error).message });
       }
     }),
-  initialPricePaisePerKg: z.coerce.bigint().nonnegative(),
+  initialPricePaisePerKg: exactInteger.pipe(z.bigint().nonnegative()),
 });
 
 export type CreateProductInput = z.infer<typeof createProductInputSchema>;

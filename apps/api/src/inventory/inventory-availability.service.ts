@@ -86,31 +86,31 @@ export class InventoryAvailabilityService {
       movementsByProduct.set(movement.productId, values);
     }
 
+    const openingByProduct = new Map(
+      openingLines.map((line) => [line.productId, line.openingGrams]),
+    );
+    const productIds = [...new Set([...openingByProduct.keys(), ...movementsByProduct.keys()])];
+    if (!productIds.length) return [];
     const productRows = await this.databaseService.db
       .select({ id: products.id, name: products.name, productCode: products.productCode })
       .from(products)
-      .where(
-        inArray(
-          products.id,
-          openingLines.map((line) => line.productId),
-        ),
-      );
+      .where(inArray(products.id, productIds));
     const productsById = new Map(productRows.map((product) => [product.id, product]));
 
-    return openingLines.map((line) => {
-      const product = productsById.get(line.productId);
+    return productIds.map((productId) => {
+      const product = productsById.get(productId);
       if (product === undefined) {
         throw new Error('Opening stock references a missing product.');
       }
       const availableGrams = calculateAvailableGrams(
-        line.openingGrams,
-        (movementsByProduct.get(line.productId) ?? []).map((quantityGrams) => ({ quantityGrams })),
+        openingByProduct.get(productId) ?? 0n,
+        (movementsByProduct.get(productId) ?? []).map((quantityGrams) => ({ quantityGrams })),
       );
       return {
         productId: product.id,
         productName: product.name,
         productCode: product.productCode,
-        openingGrams: line.openingGrams.toString(),
+        openingGrams: (openingByProduct.get(productId) ?? 0n).toString(),
         availableGrams: availableGrams.toString(),
         lowStock: availableGrams <= 5_000n,
       };

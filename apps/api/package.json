@@ -8,8 +8,9 @@
     "check": "tsc --noEmit -p tsconfig.json",
     "db:generate": "drizzle-kit generate --config drizzle.config.ts",
     "start": "node dist/main.js",
-    "start:dev": "tsx watch src/main.ts",
+    "start:dev": "node scripts/dev.mjs",
     "test": "vitest run",
+    "test:runtime": "npm run build && node --test scripts/runtime.test.mjs",
     "test:watch": "vitest",
     "format:check": "prettier --check \"src/**/*.ts\" \"*.ts\" \"*.json\"",
     "format": "prettier --write \"src/**/*.ts\" \"*.ts\" \"*.json\""

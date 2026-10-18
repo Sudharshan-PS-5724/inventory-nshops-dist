@@ -4,16 +4,16 @@ The mobile interface uses an editorial retail layout rather than a dense enterpr
 
 ## Visual system
 
-- Canvas: warm off-white `#F8F7F2`.
-- Surfaces: white cards with quiet charcoal borders; no gradients or neon accents.
-- Accent: muted leafy green for the primary action and active state only.
+- Colors: the requested dark-spruce through chartreuse palette, defined centrally in src/theme.ts, with separate light and dark roles.
+- Surfaces: clear card boundaries, restrained layouts and no gradients.
+- Accent: palette greens for actions and selected states.
 - Type: large, compact section titles; muted labels; tabular figures for weights and amounts.
 - Motion: native press feedback only in the first increment.
 
 ## First navigation
 
-Dashboard, Inventory, Activity, and Account are persistent bottom destinations. The administrator dashboard prioritizes today’s sales, low stock, machine connection state, and the next operational action. The screen currently uses mock data until Supabase authentication and API configuration are provisioned.
+The demo retains Today, Inventory, Activity and More navigation. The separate live workspace prioritizes authenticated shop selection, inventory, machines and operational forms. Live sales dashboards and histories remain pending; demo sales/statuses must not be interpreted as actual machine connectivity.
 
 ## Development data modes
 
-Without both Supabase public environment values, the application opens a clearly marked local demo session. Opening stock, purchases, transfers, wastage, expenses, and recovery sales provide confirmation-only local workflows in that mode. They must not be interpreted as server writes. Once authenticated API access is configured, the same form boundaries will submit idempotent calls to the matching NestJS endpoints.
+Without usable Supabase values the app opens the demo. With configuration it opens the live sign-in flow. The server resolves roles and shop assignments; there is no role switch in live mode. Network/service read failures offer an explicit demo option. Denied access and failed writes never become simulated successes. Native CSV picking, purchase/admin/history forms and persistent uncertain-write reconciliation remain pending. The existing demo's role switch is for visual review only.

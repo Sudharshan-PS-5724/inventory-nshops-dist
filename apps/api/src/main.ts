@@ -24,10 +24,12 @@ async function bootstrap(): Promise<void> {
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE'],
   });
   app.setGlobalPrefix('api/v1');
+  app.enableShutdownHooks();
 
   const openApiConfig = new DocumentBuilder()
     .setTitle('Multi-Shop Inventory API')
     .setVersion('0.1.0')
+    .addBearerAuth()
     .setDescription('Authoritative API for inventory, scale ingestion, and operations.')
     .build();
   const document = SwaggerModule.createDocument(app, openApiConfig);

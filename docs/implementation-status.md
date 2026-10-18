@@ -1,6 +1,8 @@
 # Implementation Status
 
-## Current increment: authenticated inventory-operation backend
+## Current increment: consistency fixes and live operational workspace
+
+See [consistency-fixes.md](consistency-fixes.md) for the current verification and remaining limits. Historical setup notes below describe the foundation, not production acceptance.
 
 ### Acceptance criteria
 
@@ -9,6 +11,13 @@
 - Critical machine and operational dependencies are recorded.
 
 ### Completed
+
+- Replaced the development transpiler with a TypeScript build/watch supervisor so Nest constructor injection works.
+- Fixed availability for products received after opening stock, strict integer validation, product-code errors, blank optional DSN handling, timezone validation and business-date consistency for timestamped deductions.
+- Added HTTP 403 mapping for access denials, database readiness, authenticated identity/catalog reads, standalone machine PLU mapping, and operation audit records for successful idempotent mutations.
+- Added a live mobile sign-in and operational workspace. The demo is separate and never submits live writes.
+- Added collector raw-error evidence output and detection of conflicting payloads with the same record identity.
+- Added compiled HTTP runtime tests with stubbed infrastructure, without requiring network listeners.
 
 - Inspected the new project folder: it was empty and not a Git repository.
 - Read the supplied SRS and Dahua/Longfly integration evidence.
@@ -40,8 +49,8 @@
 
 ### Not started
 
-- Sales, recovery sales, machine-event ingestion, notifications, reports/PDF generation, and collector implementation.
-- React Native application scaffold.
+- Normal machine-sale ingestion, collector pairing/upload, notifications and reports/PDF generation.
+- Remaining live mobile screens, including purchase editing, user/shop administration, histories, reports and adjustments. These still have demo designs only.
 
 ### Blocking external dependencies
 
@@ -53,9 +62,9 @@
 ### Verification performed
 
 - `npm run api:check` - passed.
-- `npm run api:test` - passed (25 tests across 17 files).
+- `npm.cmd run api:test` - regression suite expanded; current results are recorded in consistency-fixes.md.
 - `npm run api:build` - passed.
 - `npm run format:check --workspace=@inventory/api` - passed.
-- A dummy-config NestJS application bootstrap (without binding a port) passed. An HTTP liveness request could not be executed because this development sandbox blocks loopback socket access. No production connectivity claim is being made.
+- `npm.cmd run test:runtime --workspace=@inventory/api` exercises compiled dependency injection and HTTP status handling using Fastify injection, not a public socket. Database and authentication providers are stubbed in these tests.
 - `npm audit --omit=dev --audit-level=moderate` - not verified: the npm advisory endpoint was unreachable due DNS resolution failure. Earlier installation reported four moderate vulnerabilities across the full dependency graph; no forced upgrade was applied.
-- Collector protocol unit tests - passed (2 tests).
+- Collector tests include malformed-response evidence preservation and SQLite identity collisions.

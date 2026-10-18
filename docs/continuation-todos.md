@@ -8,18 +8,22 @@ Do not connect a real weighing machine to stock deduction until live response ca
 
 ## Current state
 
+### Shop integration increment (2026-10-18)
+
+Admin-only machine registration, shop-scoped listing, CSV preview/import and standalone PLU mapping are implemented in the API and connected to the live mobile workspace. See [shop-machine-integration.md](shop-machine-integration.md) and [consistency-fixes.md](consistency-fixes.md). Collector authentication, verified hardware parsing and automatic sale deductions remain pending. Existing migrations are sufficient; real database integration testing is still required.
+
 | Area | Current state | Safe use now |
 | --- | --- | --- |
 | API | NestJS modules and domain tests are implemented for core stock operations | Development and code review only until a database is provisioned and migrations are applied |
 | Database | Drizzle PostgreSQL schema and three SQL migrations exist | Apply to a fresh staging database first |
-| Mobile app | Complete navigable UI prototype with realistic dummy data | Screen review and user-flow feedback |
+| Mobile app | Demo screens plus separate authenticated live operational workspace | Demo review; live acceptance requires staging setup |
 | Supabase | Client configuration exists but no project credentials are configured | Configure authentication and PostgreSQL before live mobile testing |
 | Dahua script | Read-only statement retrieval utility exists | Small diagnostic reads from the actual scale only |
 | Collector | SQLite outbox foundation exists | Do not use for production sale ingestion yet |
 
 ## Important boundaries
 
-- The mobile app currently uses dummy data. A visible preview message confirms that a form action does not change live inventory.
+- The demo uses dummy data and never changes live inventory. Configured installations use a separate authenticated live workspace. See consistency-fixes.md for exact live-screen coverage.
 - The role switch in the mobile prototype is for screen review. The API must remain the authority for all roles and shop access.
 - Opening-stock corrections, inventory adjustments, reports, notifications, device registration, PLU mapping, and machine ingestion are not production-ready backend workflows yet.
 - The Dahua script never writes to the machine. Do not replace it with undocumented commands.
@@ -89,7 +93,7 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=your-public-anon-key
 ```
 
 9. Apply `apps/api/drizzle/0000_strange_captain_midlands.sql`, `0001_perpetual_timeslip.sql`, and `0002_chubby_chameleon.sql` to the empty staging database in order. Review each migration and take a backup first. There is no approved automatic production migration command yet.
-10. Seed or create the corresponding application user and administrator role data using the administration API once the database is available.
+10. Bootstrap the first owner directly in the staging database: insert the existing Supabase Auth user's UUID, display name and ADMIN role into the application users table. The administration API cannot bootstrap its own first Admin because it requires an existing authorized identity. Then use that owner's JWT for shop and shop-user setup. Do not create a second Admin.
 11. Sign in from the mobile app and confirm that the API validates the Supabase access token and resolves the server-side role.
 
 Never put a Supabase service-role key in the mobile app. The public anonymous key is acceptable in the app. The database URL, service-role key, collector token, and signing secrets belong only in server or secret-manager configuration.
@@ -162,7 +166,7 @@ py -m unittest discover -s tests -v
 3. Implement opening-stock corrections with original value, corrected value, reason, actor, and timestamp.
 4. Implement authorised stock adjustments with audit logging.
 5. Add list, detail, history, filter, and pagination endpoints needed by the mobile screens.
-6. Implement device registration, location assignment, PLU mapping, and machine status.
+6. Device registration and application PLU mapping exist. Implement secure pairing, audited reassignment, credential revocation and actual connection status.
 7. Build collector-authenticated ingestion only after real Dahua captures validate the response parser and deduplication policy.
 8. Add quarantine and review handling for unknown PLUs, repeated records, malformed records, and price mismatches.
 9. Add normal machine sale creation and sale detail/history endpoints.
@@ -197,8 +201,8 @@ py -m unittest discover -s tests -v
 
 ### Required before live use
 
-1. Restore and complete real Supabase session handling, sign-in, sign-out, password reset, and expired-session handling.
-2. Replace dummy repositories with protected API repositories. Do not query or write inventory tables directly from the mobile app.
+1. Staging-test the implemented Supabase sign-in, sign-out and session refresh. Add password reset and session-expiry user acceptance tests.
+2. Extend the live workspace to remaining purchase/admin/history screens. Do not query or write inventory tables directly from the mobile app.
 3. Retain fallback data only for unavailable development environments. Disable business-changing actions when the backend is unavailable because full mobile offline operation is out of scope.
 4. Build proper create and edit pages for products, suppliers, shops, users, and devices.
 5. Add field selectors, multi-line purchase editor, product search, date pickers, confirmation dialogs, and input validation.

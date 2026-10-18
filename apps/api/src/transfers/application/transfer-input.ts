@@ -1,8 +1,9 @@
 import { z } from 'zod';
+import { exactInteger } from '../../shared/exact-integer.js';
 
 const transferItemSchema = z.object({
   productId: z.uuid(),
-  quantityGrams: z.coerce.bigint().positive(),
+  quantityGrams: exactInteger.pipe(z.bigint().positive()),
 });
 
 export const createTransferInputSchema = z

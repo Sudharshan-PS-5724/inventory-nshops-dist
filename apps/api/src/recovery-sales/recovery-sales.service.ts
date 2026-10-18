@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { and, desc, eq, inArray, lte, sql } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
+import { validateLocationDate } from '../shared/business-date.js';
 import type { AuthenticatedActor } from '../access/domain/access-policy.js';
 import {
   inventoryLocations,
@@ -67,6 +68,7 @@ export class RecoverySalesService {
       if (actor.role !== 'ADMIN') throw new NotFoundException('Inventory location was not found.');
     } else requireRecordShopAccess(actor, { shopId: location.shopId });
 
+    await validateLocationDate(tx, location.shopId, input.businessDate, input.soldAt);
     const productRows = await tx
       .select({ id: products.id, recoveryBasisPoints: products.recoveryBasisPoints })
       .from(products)

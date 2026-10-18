@@ -5,7 +5,7 @@
 - Application-generated UUID primary keys.
 - `timestamptz` for system/event timestamps; `business_date date` for daily accounting.
 - `bigint` for grams and paise; never `float`/`double precision` for quantities or money.
-- All timestamps are UTC. Each shop has an IANA timezone used to derive its business date.
+- All timestamps are UTC. Timestamped wastage/recovery events validate the supplied business date in the shop's timezone. Central inventory currently uses Asia/Kolkata. Other date-only commands accept an explicit business date.
 - `created_at`, `updated_at`, and actor IDs where required; confirmed ledger/sale evidence is append-only.
 
 ## Critical constraints
@@ -24,7 +24,7 @@
 ## Indexes driven by Version 1 queries
 
 - `inventory_movements(location_id, product_id, business_date, occurred_at)`
-- `sales(shop_id, sold_at desc)`
+- `sales(location_id, sold_at)`
 - `machine_sale_events(device_id, status, received_at)`
 - `opening_stock_submissions(location_id, business_date)`
 - `product_prices(product_id, effective_from desc)`

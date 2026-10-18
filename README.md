@@ -4,6 +4,8 @@ An inventory management system for a fruit and vegetable business with central i
 
 The project is at a documented pre-production milestone. The core backend modules and full mobile UI prototype are present. Supabase provisioning, live mobile repositories, and verified weighing-machine ingestion must be completed before real operations begin.
 
+The latest backend increment adds owner-only machine registration, shop-scoped machine listing, and atomic CSV product/PLU/opening-stock imports. See [Shop and machine integration](docs/shop-machine-integration.md) for the API contracts, CSV format, machine identification rules and remaining live-integration work. Registration does not connect to or program the physical scale.
+
 ## What this application manages
 
 - Central inventory and multiple shop locations
@@ -96,8 +98,8 @@ The live Dahua parser is intentionally not complete yet. Real captures must prov
 | --- | --- | --- |
 | NestJS API | Auth, shop scope, products, prices, opening stock, purchases, transfers, wastage, expenses, recovery sales, idempotency | Provisioned database, integration tests, report APIs, notification APIs, ingestion APIs |
 | Database | Drizzle schema and migrations | Staging Supabase application and migration verification |
-| React Native app | All V1 preview screens with realistic dummy data | Real auth, API repositories, live forms, loading and error states |
-| Dahua tooling | Read-only statement diagnostic script and collector outbox foundation | Parser validation, device registration, PLU mapping, sale ingestion |
+| React Native app | Separate demo and authenticated live operational workspace | Staging acceptance, remaining admin/purchase/history screens, native CSV file picker |
+| Dahua tooling | Read-only diagnostic, collision-detecting outbox; API machine registration and PLU mappings | Secure pairing, parser validation, physical PLU synchronization, sale ingestion |
 | Deployment | Cloud Run and Supabase design documents | Staging deployment, monitoring, backups, production pilot |
 
 ## Mobile UI coverage
@@ -112,7 +114,9 @@ The app contains navigable preview screens for:
 
 The visual direction is operational and quick to scan, with compact native typography, bright action accents, and restrained surfaces. It does not bundle or copy a proprietary Blinkit font.
 
-All current mobile data is dummy preview data. Form actions display a preview confirmation and do not change a real database.
+Without usable Supabase configuration, the original screens run as a demo and never change the database. With configuration, the app opens sign-in and the live workspace in `apps/mobile/src/live/LiveApp.tsx`. It reads the authenticated role, assigned shops, products, inventory and registered machines from the API. It supports live opening stock, CSV-content import, machine registration, PLU mapping, price changes, transfers, wastage, recovery sales and expenses. Other preview screens have not yet been converted to live workflows. See [consistency fixes and verification](docs/consistency-fixes.md).
+
+Read connection failures are displayed explicitly. A demo option is offered for service/network failures, never as a successful save or as a workaround for denied access. Native CSV file selection is pending; the live form currently accepts pasted CSV contents. An uncertain write can be retried unchanged with the same in-memory key. Do not restart the app to retry an uncertain write; persistent reconciliation is not implemented.
 
 ## Repository layout
 
@@ -293,6 +297,7 @@ flowchart LR
 - [Testing strategy](docs/testing-strategy.md)
 - [Deployment runbook](docs/deployment-runbook.md)
 - [Collector README](apps/collector/README.md)
+- [Product image guidelines](docs/product-image-guidelines.md)
 
 ## Before production
 

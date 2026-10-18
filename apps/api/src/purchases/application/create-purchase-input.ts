@@ -1,9 +1,10 @@
 import { z } from 'zod';
+import { exactInteger } from '../../shared/exact-integer.js';
 
 const purchaseItemSchema = z.object({
   productId: z.uuid(),
-  quantityGrams: z.coerce.bigint().positive(),
-  paisePerKg: z.coerce.bigint().nonnegative(),
+  quantityGrams: exactInteger.pipe(z.bigint().positive()),
+  paisePerKg: exactInteger.pipe(z.bigint().nonnegative()),
 });
 
 export const createPurchaseInputSchema = z

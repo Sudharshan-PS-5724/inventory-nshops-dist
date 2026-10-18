@@ -1,4 +1,7 @@
 import { Module } from '@nestjs/common';
+import { APP_FILTER } from '@nestjs/core';
+import { AccessDeniedFilter } from './access/access-denied.filter.js';
+import { CatalogModule } from './catalog/catalog.module.js';
 import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module.js';
 import { validateEnvironment } from './config/environment.js';
@@ -14,8 +17,10 @@ import { WastageModule } from './wastage/wastage.module.js';
 import { ExpensesModule } from './expenses/expenses.module.js';
 import { AdministrationModule } from './administration/administration.module.js';
 import { RecoverySalesModule } from './recovery-sales/recovery-sales.module.js';
+import { ShopIntegrationModule } from './shop-integration/shop-integration.module.js';
 
 @Module({
+  providers: [{ provide: APP_FILTER, useClass: AccessDeniedFilter }],
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
@@ -35,6 +40,8 @@ import { RecoverySalesModule } from './recovery-sales/recovery-sales.module.js';
     ExpensesModule,
     AdministrationModule,
     RecoverySalesModule,
+    ShopIntegrationModule,
+    CatalogModule,
   ],
 })
 export class AppModule {}

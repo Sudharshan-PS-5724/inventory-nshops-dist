@@ -132,7 +132,13 @@ def main() -> int:
 
     for sequence in range(args.start, end + 1):
         reply = request_statement(args.host, args.port, sequence, args.timeout)
-        record = parse_statement_reply(reply, sequence)
+        try:
+            record = parse_statement_reply(reply, sequence)
+        except DahuaProtocolError as error:
+            # Preserve evidence even when the unverified layout cannot be decoded.
+            if args.raw:
+                print(json.dumps({"sequence": sequence, "result": "parse-error", "response_hex": reply.hex(" "), "error": str(error)}))
+            raise
         output: dict[str, object] = {"sequence": sequence, "result": "no-data" if record is None else "record"}
         if record is not None:
             output["record"] = asdict(record)

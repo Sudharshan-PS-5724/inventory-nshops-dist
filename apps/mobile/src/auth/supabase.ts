@@ -1,12 +1,17 @@
 import * as SecureStore from "expo-secure-store";
+import { Platform } from "react-native";
 import {
   createClient,
   type Session,
   type SupabaseClient,
 } from "@supabase/supabase-js";
 
-const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
-const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+import {
+  supabaseUrl as url,
+  supabaseAnonKey as anonKey,
+  hasLiveConfiguration,
+} from "./config";
+export { hasLiveConfiguration } from "./config";
 
 const secureStorage = {
   getItem: (key: string) => SecureStore.getItemAsync(key),
@@ -14,11 +19,23 @@ const secureStorage = {
   removeItem: (key: string) => SecureStore.deleteItemAsync(key),
 };
 
+// Browser preview keeps tokens in memory rather than using an unsupported native module.
+const browserSession = new Map<string, string>();
+const browserStorage = {
+  getItem: async (key: string) => browserSession.get(key) ?? null,
+  setItem: async (key: string, value: string) => {
+    browserSession.set(key, value);
+  },
+  removeItem: async (key: string) => {
+    browserSession.delete(key);
+  },
+};
+
 export const supabase: SupabaseClient | null =
-  url && anonKey
+  hasLiveConfiguration && url && anonKey
     ? createClient(url, anonKey, {
         auth: {
-          storage: secureStorage,
+          storage: Platform.OS === "web" ? browserStorage : secureStorage,
           persistSession: true,
           autoRefreshToken: true,
           detectSessionInUrl: false,

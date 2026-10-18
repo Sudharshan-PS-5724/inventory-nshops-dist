@@ -27,11 +27,24 @@ class Outbox:
         self.connection.commit()
 
     def store(self, statement: RawStatement) -> None:
-        self.connection.execute(
-            "insert or ignore into raw_statements(device_id, record_epoch, record_sequence, payload) values (?, ?, ?, ?)",
-            (statement.device_id, statement.record_epoch, statement.record_sequence, statement.payload),
-        )
-        self.connection.commit()
+        # Serialize duplicate comparison with insertion, including concurrent connections.
+        self.connection.execute("BEGIN IMMEDIATE")
+        try:
+            existing = self.connection.execute(
+                "select payload from raw_statements where device_id=? and record_epoch=? and record_sequence=?",
+                (statement.device_id, statement.record_epoch, statement.record_sequence),
+            ).fetchone()
+            if existing is not None and bytes(existing[0]) != statement.payload:
+                raise ValueError("Record identity collision: payload differs. Stop collection and investigate record reset/epoch.")
+            if existing is None:
+                self.connection.execute(
+                    "insert into raw_statements(device_id, record_epoch, record_sequence, payload) values (?, ?, ?, ?)",
+                    (statement.device_id, statement.record_epoch, statement.record_sequence, statement.payload),
+                )
+            self.connection.commit()
+        except Exception:
+            self.connection.rollback()
+            raise
 
     def close(self) -> None:
         self.connection.close()

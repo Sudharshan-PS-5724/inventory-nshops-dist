@@ -1,11 +1,12 @@
 import { z } from 'zod';
+import { exactInteger } from '../../shared/exact-integer.js';
 
 export const recordWastageInputSchema = z.object({
   locationId: z.uuid(),
   productId: z.uuid(),
   businessDate: z.iso.date(),
-  quantityGrams: z.coerce.bigint().positive(),
-  occurredAt: z.coerce.date(),
+  quantityGrams: exactInteger.pipe(z.bigint().positive()),
+  occurredAt: z.iso.datetime({ offset: true }).transform((value) => new Date(value)),
   reason: z.string().trim().min(1).max(320).optional(),
 });
 

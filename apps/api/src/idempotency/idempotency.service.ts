@@ -2,7 +2,7 @@ import { BadRequestException, ConflictException, Injectable } from '@nestjs/comm
 import { and, eq } from 'drizzle-orm';
 import { createHash, randomUUID } from 'node:crypto';
 import { DatabaseService } from '../database/database.service.js';
-import { idempotencyKeys } from '../database/schema.js';
+import { idempotencyKeys, auditLogs } from '../database/schema.js';
 
 export type DatabaseTransaction = Parameters<
   Parameters<DatabaseService['db']['transaction']>[0]
@@ -101,6 +101,14 @@ export class IdempotencyService {
 
       const response = await work(transaction);
       const normalizedResponse = JSON.parse(JSON.stringify(response)) as T;
+      await transaction.insert(auditLogs).values({
+        id: randomUUID(),
+        actorId,
+        action: operation,
+        entityType: 'IDEMPOTENT_OPERATION',
+        entityId: recordId,
+        detail: JSON.stringify({ requestFingerprint: fingerprint, response: normalizedResponse }),
+      });
       await transaction
         .update(idempotencyKeys)
         .set({ responseStatus: 201, responseBody: JSON.stringify(normalizedResponse) })

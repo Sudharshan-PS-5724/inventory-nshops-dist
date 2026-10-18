@@ -1,8 +1,9 @@
 import { z } from 'zod';
+import { exactInteger } from '../../shared/exact-integer.js';
 
 const openingStockLineSchema = z.object({
   productId: z.uuid(),
-  quantityGrams: z.coerce.bigint().nonnegative(),
+  quantityGrams: exactInteger.pipe(z.bigint().nonnegative()),
 });
 
 export const submitOpeningStockInputSchema = z
