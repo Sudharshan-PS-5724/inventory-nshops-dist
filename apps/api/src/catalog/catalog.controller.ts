@@ -3,7 +3,7 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { and, desc, eq, inArray, lte } from 'drizzle-orm';
 import { AuthenticationGuard } from '../auth/authentication.guard.js';
 import { CurrentActor } from '../auth/current-actor.decorator.js';
-import { requireAdministrator, type AuthenticatedActor } from '../access/domain/access-policy.js';
+import { requireCapability, type AuthenticatedActor } from '../access/domain/access-policy.js';
 import { DatabaseService } from '../database/database.service.js';
 import {
   inventoryLocations,
@@ -81,7 +81,7 @@ export class CatalogController {
 
   @Get('suppliers')
   suppliers(@CurrentActor() actor: AuthenticatedActor) {
-    requireAdministrator(actor);
+    requireCapability(actor, 'HUB_MANAGE_SUPPLIERS');
     return this.database.db
       .select()
       .from(suppliers)

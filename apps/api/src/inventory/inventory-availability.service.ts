@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { and, eq, inArray } from 'drizzle-orm';
-import type { AuthenticatedActor } from '../access/domain/access-policy.js';
+import { and, eq, inArray, lte } from 'drizzle-orm';
+import { hasCapability, type AuthenticatedActor } from '../access/domain/access-policy.js';
 import { DatabaseService } from '../database/database.service.js';
 import {
   inventoryLocations,
@@ -28,14 +28,17 @@ export class InventoryAvailabilityService {
     const { locationId, businessDate } = parsed.data;
 
     const [location] = await this.databaseService.db
-      .select({ shopId: inventoryLocations.shopId })
+      .select({
+        shopId: inventoryLocations.shopId,
+        locationType: inventoryLocations.locationType,
+      })
       .from(inventoryLocations)
       .where(eq(inventoryLocations.id, locationId));
     if (location === undefined) {
       throw new NotFoundException('Inventory location was not found.');
     }
     if (location.shopId === null) {
-      if (actor.role !== 'ADMIN') {
+      if (actor.role !== 'ADMIN' && !hasCapability(actor, 'HUB_RECEIVE_PURCHASE')) {
         throw new NotFoundException('Inventory location was not found.');
       }
     } else {
@@ -51,20 +54,22 @@ export class InventoryAvailabilityService {
           eq(openingStockSubmissions.businessDate, businessDate),
         ),
       );
-    if (submission === undefined) {
+    if (submission === undefined && location.locationType === 'SHOP') {
       throw new NotFoundException(
         'Opening stock has not been submitted for this location and business date.',
       );
     }
 
     const [openingLines, movements] = await Promise.all([
-      this.databaseService.db
-        .select({
-          productId: openingStockLines.productId,
-          openingGrams: openingStockLines.quantityGrams,
-        })
-        .from(openingStockLines)
-        .where(eq(openingStockLines.submissionId, submission.id)),
+      submission
+        ? this.databaseService.db
+            .select({
+              productId: openingStockLines.productId,
+              openingGrams: openingStockLines.quantityGrams,
+            })
+            .from(openingStockLines)
+            .where(eq(openingStockLines.submissionId, submission.id))
+        : Promise.resolve([]),
       this.databaseService.db
         .select({
           productId: inventoryMovements.productId,
@@ -74,7 +79,9 @@ export class InventoryAvailabilityService {
         .where(
           and(
             eq(inventoryMovements.locationId, locationId),
-            eq(inventoryMovements.businessDate, businessDate),
+            location.locationType === 'CENTRAL'
+              ? lte(inventoryMovements.businessDate, businessDate)
+              : eq(inventoryMovements.businessDate, businessDate),
           ),
         ),
     ]);

@@ -18,6 +18,21 @@ import { ProductsService } from './products.service.js';
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
+  @Post('families')
+  @ApiOperation({
+    summary:
+      'Create linked fresh and discounted stock products with independent initial selling prices.',
+  })
+  @ApiHeader({ name: 'Idempotency-Key', required: true })
+  @ApiCreatedResponse({ description: 'Linked fresh and discounted products created atomically.' })
+  createFamily(
+    @CurrentActor() actor: AuthenticatedActor,
+    @Headers('idempotency-key') idempotencyKey: string | undefined,
+    @Body() body: unknown,
+  ) {
+    return this.productsService.createFamily(actor, idempotencyKey, body);
+  }
+
   @Post()
   @ApiOperation({
     summary: 'Create a product and its first administrator-controlled selling price.',

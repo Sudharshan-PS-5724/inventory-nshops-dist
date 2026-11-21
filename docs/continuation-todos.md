@@ -8,14 +8,14 @@ Do not connect a real weighing machine to stock deduction until live response ca
 
 ## Current state
 
-### Shop integration increment (2026-10-18)
+### Shop integration and migration increments (2026-11-21)
 
-Admin-only machine registration, shop-scoped listing, CSV preview/import and standalone PLU mapping are implemented in the API and connected to the live mobile workspace. See [shop-machine-integration.md](shop-machine-integration.md) and [consistency-fixes.md](consistency-fixes.md). Collector authentication, verified hardware parsing and automatic sale deductions remain pending. Existing migrations are sufficient; real database integration testing is still required.
+Admin-only machine registration, shop-scoped listing, CSV preview/import and standalone PLU mapping are implemented in the API and connected to the live mobile workspace. The staged stock-requirement and dispatch/receipt lifecycle, fresh-to-discounted reclassification, and atomic product-family creation are also implemented in source and must be staging-tested. A collector-token-protected ingestion endpoint now accepts verified decoded sale events, writes raw evidence, and quarantines invalid records. See [shop-machine-integration.md](shop-machine-integration.md) and [consistency-fixes.md](consistency-fixes.md). Verified hardware parsing and automatic collector uploading remain pending.
 
 | Area | Current state | Safe use now |
 | --- | --- | --- |
 | API | NestJS modules and domain tests are implemented for core stock operations | Development and code review only until a database is provisioned and migrations are applied |
-| Database | Drizzle PostgreSQL schema and three SQL migrations exist | Apply to a fresh staging database first |
+| Database | Drizzle PostgreSQL schema and five SQL migrations exist | Apply to a fresh staging database first |
 | Mobile app | Demo screens plus separate authenticated live operational workspace | Demo review; live acceptance requires staging setup |
 | Supabase | Client configuration exists but no project credentials are configured | Configure authentication and PostgreSQL before live mobile testing |
 | Dahua script | Read-only statement retrieval utility exists | Small diagnostic reads from the actual scale only |
@@ -25,7 +25,7 @@ Admin-only machine registration, shop-scoped listing, CSV preview/import and sta
 
 - The demo uses dummy data and never changes live inventory. Configured installations use a separate authenticated live workspace. See consistency-fixes.md for exact live-screen coverage.
 - The role switch in the mobile prototype is for screen review. The API must remain the authority for all roles and shop access.
-- Opening-stock corrections, inventory adjustments, reports, notifications, device registration, PLU mapping, and machine ingestion are not production-ready backend workflows yet.
+- Opening-stock corrections, inventory adjustments, reports, notifications, device reassignment/pairing, and machine ingestion are not production-ready for live operation. Device registration, PLU mapping, and guarded ingestion source code exist but require staging and hardware verification.
 - The Dahua script never writes to the machine. Do not replace it with undocumented commands.
 - Never store production passwords, service role keys, collector tokens, database backups, or scale credentials in this repository.
 
@@ -92,7 +92,7 @@ EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 EXPO_PUBLIC_SUPABASE_ANON_KEY=your-public-anon-key
 ```
 
-9. Apply `apps/api/drizzle/0000_strange_captain_midlands.sql`, `0001_perpetual_timeslip.sql`, and `0002_chubby_chameleon.sql` to the empty staging database in order. Review each migration and take a backup first. There is no approved automatic production migration command yet.
+9. Apply every SQL migration in `apps/api/drizzle/` in numeric order, from `0000_strange_captain_midlands.sql` through `0005_curved_mentor.sql`, to an empty staging database. Review each migration and take a backup first. There is no approved automatic production migration command yet.
 10. Bootstrap the first owner directly in the staging database: insert the existing Supabase Auth user's UUID, display name and ADMIN role into the application users table. The administration API cannot bootstrap its own first Admin because it requires an existing authorized identity. Then use that owner's JWT for shop and shop-user setup. Do not create a second Admin.
 11. Sign in from the mobile app and confirm that the API validates the Supabase access token and resolves the server-side role.
 

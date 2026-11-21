@@ -18,6 +18,9 @@ import { ExpensesModule } from './expenses/expenses.module.js';
 import { AdministrationModule } from './administration/administration.module.js';
 import { RecoverySalesModule } from './recovery-sales/recovery-sales.module.js';
 import { ShopIntegrationModule } from './shop-integration/shop-integration.module.js';
+import { StockRequirementsModule } from './stock-requirements/stock-requirements.module.js';
+import { StockClassificationModule } from './stock-classification/stock-classification.module.js';
+import { MachineIngestionModule } from './machine-ingestion/machine-ingestion.module.js';
 
 @Module({
   providers: [{ provide: APP_FILTER, useClass: AccessDeniedFilter }],
@@ -41,6 +44,9 @@ import { ShopIntegrationModule } from './shop-integration/shop-integration.modul
     AdministrationModule,
     RecoverySalesModule,
     ShopIntegrationModule,
+    StockRequirementsModule,
+    StockClassificationModule,
+    MachineIngestionModule,
     CatalogModule,
   ],
 })

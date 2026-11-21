@@ -13,6 +13,15 @@ export function isTimezone(value: string): boolean {
 }
 
 export function assertBusinessDate(date: string, occurredAt: Date, timezone: string): void {
+  if (date !== businessDateFor(occurredAt, timezone)) {
+    throw new BadRequestException({
+      code: 'BUSINESS_DATE_MISMATCH',
+      message: 'Business date must match the event timestamp in the location timezone.',
+    });
+  }
+}
+
+export function businessDateFor(occurredAt: Date, timezone: string): string {
   const parts = new Intl.DateTimeFormat('en', {
     timeZone: timezone,
     year: 'numeric',
@@ -20,12 +29,7 @@ export function assertBusinessDate(date: string, occurredAt: Date, timezone: str
     day: '2-digit',
   }).formatToParts(occurredAt);
   const get = (type: string) => parts.find((part) => part.type === type)!.value;
-  if (date !== `${get('year')}-${get('month')}-${get('day')}`) {
-    throw new BadRequestException({
-      code: 'BUSINESS_DATE_MISMATCH',
-      message: 'Business date must match the event timestamp in the location timezone.',
-    });
-  }
+  return `${get('year')}-${get('month')}-${get('day')}`;
 }
 
 export async function validateLocationDate(

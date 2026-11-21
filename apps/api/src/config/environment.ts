@@ -14,6 +14,7 @@ const environmentSchema = z.object({
   SUPABASE_JWT_ISSUER: z.string().url(),
   SUPABASE_JWKS_URL: z.string().url(),
   SUPABASE_JWT_AUDIENCE: z.string().min(1).default('authenticated'),
+  COLLECTOR_INGEST_TOKEN: z.string().min(32),
 });
 
 export type Environment = z.infer<typeof environmentSchema>;

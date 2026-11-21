@@ -2,7 +2,7 @@
 
 ## Context
 
-Three shops require shared authoritative inventory while Dahua scales sit on private shop networks. A mobile app is not a reliable always-on machine connector.
+The platform is designed for ten shops, with shared authoritative inventory and a central hub, while Dahua scales sit on private shop networks. A mobile app is not a reliable always-on machine connector.
 
 ## Chosen architecture
 
@@ -30,6 +30,7 @@ React Native mobile apps ── HTTPS ──> NestJS modular-monolith API ──
 - Products and pricing
 - Opening stock and reconciliation
 - Purchases and suppliers
+- Stock requirements and hub allocation
 - Transfers
 - Inventory ledger and availability
 - Sales and machine ingestion
@@ -52,12 +53,14 @@ Modules own their use cases. Controllers are request mappers only. Cross-module 
 5. An accepted event creates sale data and one negative inventory movement in one transaction.
 6. Gateway marks the SQLite event acknowledged only after a successful authoritative API response.
 
-### Transfer
+### Target transfer lifecycle
 
-1. Authorized user submits source, destination, product lines, and idempotency key.
-2. API locks/rechecks source availability for the current business date.
-3. API creates transfer header/items plus paired source-out/destination-in movements in one transaction.
-4. API emits an audit record and optional owner notification after commit.
+1. A shop submits a requirement; this does not change stock.
+2. The hub reviews it, records approved quantities or a rejection reason, then creates a dispatch.
+3. The source quantity leaves stock only when dispatched; the destination receives stock only after a verified receipt.
+4. A discrepancy remains reviewable with immutable dispatched and received quantities.
+
+The current legacy `POST /transfers` command remains an immediate administrator-confirmed transfer for existing callers. New dispatch, receipt, and discrepancy-approval commands implement the staged lifecycle; the mobile workflows will be moved to them in a later phase.
 
 ## Explicit non-goals
 

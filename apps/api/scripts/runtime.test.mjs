@@ -12,6 +12,7 @@ Object.assign(process.env, {
   SUPABASE_JWT_ISSUER: 'https://example.invalid/auth/v1',
   SUPABASE_JWKS_URL: 'https://example.invalid/auth/v1/.well-known/jwks.json',
   SENTRY_DSN: '',
+  COLLECTOR_INGEST_TOKEN: 'test-collector-token-must-be-at-least-32-chars',
 });
 const { AppModule } = await import('../dist/app.module.js');
 const { DatabaseService } = await import('../dist/database/database.service.js');
@@ -72,6 +73,18 @@ test('health endpoints work without listening on a network socket', async () => 
 });
 test('unauthenticated requests receive 401', async () => {
   assert.equal((await request({ url: '/api/v1/identity' })).statusCode, 401);
+});
+test('machine ingestion rejects callers without the collector token', async () => {
+  assert.equal(
+    (
+      await request({
+        method: 'POST',
+        url: '/api/v1/machine-events/dahua',
+        payload: {},
+      })
+    ).statusCode,
+    401,
+  );
 });
 test('owner-only mutations and cross-shop reads return 403, not 500', async () => {
   for (const url of [

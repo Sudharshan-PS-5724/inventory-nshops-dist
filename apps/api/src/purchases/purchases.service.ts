@@ -1,7 +1,11 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { and, eq, inArray } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
-import { requireAdministrator, type AuthenticatedActor } from '../access/domain/access-policy.js';
+import {
+  requireAdministrator,
+  requireCapability,
+  type AuthenticatedActor,
+} from '../access/domain/access-policy.js';
 import {
   inventoryLocations,
   inventoryMovements,
@@ -33,7 +37,7 @@ export class PurchasesService {
     idempotencyKey: string | undefined,
     rawInput: unknown,
   ) {
-    requireAdministrator(actor);
+    requireCapability(actor, 'HUB_MANAGE_SUPPLIERS');
     const parsed = createSupplierInputSchema.safeParse(rawInput);
     if (!parsed.success) {
       throw new BadRequestException({
@@ -56,7 +60,7 @@ export class PurchasesService {
     idempotencyKey: string | undefined,
     rawInput: unknown,
   ) {
-    requireAdministrator(actor);
+    requireCapability(actor, 'HUB_RECEIVE_PURCHASE');
     const parsed = createPurchaseInputSchema.safeParse(rawInput);
     if (!parsed.success) {
       throw new BadRequestException({

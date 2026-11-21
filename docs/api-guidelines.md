@@ -24,6 +24,7 @@ All create/confirm operations require `Idempotency-Key`. The API stores the oper
 GET/POST     /shops
 GET          /identity
 GET/POST     /products
+POST         /products/families
 GET/POST     /suppliers
 POST         /shop-users
 POST         /shop-users/{userId}/assignments
@@ -31,19 +32,65 @@ POST         /products/{id}/prices
 POST         /opening-stock/submissions
 POST         /purchases
 POST         /transfers
+POST         /transfers/dispatch
+POST         /transfers/{id}/receipt
+POST         /transfers/{id}/approve-discrepancy
+GET/POST     /stock-requirements
+POST         /stock-requirements/{id}/review
+POST         /stock-classifications
 POST         /wastage
 POST         /recovery-sales
 GET          /inventory/availability
 GET/POST     /machines
 POST         /machine-plu-mappings
+POST         /machine-events/dahua
 POST         /master-imports/preview
 POST         /master-imports
 GET          /health/live
 GET          /health/ready
 ```
 
-## Planned machine ingestion contract (not an available endpoint)
+## Fresh and discounted product families
 
-`POST /machine-events/dahua` is reserved for a future verified collector integration. Its implementation must revalidate raw statement fields and never trust the collector's product mapping, shop or status decision. Sales history, notifications and report endpoints are also pending. Do not call these paths as implemented APIs.
+Use POST /products/families for every new SRS product. It creates both stock
+SKUs in one database transaction:
+
+- a fresh SKU using a code from 01 through 200
+- a linked discounted SKU using the derived code 201 through 400
+
+For example, fresh code 01 creates discounted code 201; fresh code 200 creates
+discounted code 400. The request supplies distinct initial selling prices because
+the discounted SKU is independently saleable stock.
+
+~~~json
+{
+  "freshName": "Tomato",
+  "freshProductCode": "01",
+  "discountedName": "Tomato (Discounted)",
+  "freshInitialPricePaisePerKg": "6000",
+  "discountedInitialPricePaisePerKg": "3500"
+}
+~~~
+
+Include an Idempotency-Key header. Existing POST /products remains for legacy
+catalog data; it does not create a discounted counterpart. Do not use it for a
+new SRS product family.
+
+## Machine ingestion contract
+
+`POST /machine-events/dahua` is a collector-only endpoint. It uses the
+`X-Collector-Token` secret and must never receive a mobile-user JWT. Its
+idempotency identity is `deviceId + recordEpoch + recordSequence`, not a
+client-generated identifier. The API records raw payload evidence first, derives
+the shop business date from the registered device location, validates the active
+PLU mapping and available stock, and then either:
+
+- accepts the event, creating the normal sale, item snapshot, and one negative
+  inventory movement atomically; or
+- quarantines it with a reason and makes no inventory change.
+
+The collector parser remains deliberately disabled until a real Dahua response
+fixture verifies the vendor field layout. Do not manufacture decoded event data
+or enable automatic uploading before that fixture and parser review are complete.
 
 Machine and import payloads are documented in [shop-machine-integration.md](shop-machine-integration.md). Quantities and amounts should be decimal integer strings in grams and paise. Boolean, null, fractional, unsafe numeric and out-of-PostgreSQL-bigint values are rejected. Timestamped wastage/recovery events must match their business date in the shop timezone; central inventory currently uses Asia/Kolkata.

@@ -4,6 +4,7 @@ import {
   boolean,
   check,
   date,
+  foreignKey,
   index,
   pgEnum,
   pgTable,
@@ -20,7 +21,15 @@ const auditColumns = {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 };
 
-export const roleEnum = pgEnum('role', ['ADMIN', 'SHOP_USER']);
+export const roleEnum = pgEnum('role', [
+  'ADMIN',
+  'HUB_MANAGER',
+  'HUB_EMPLOYEE',
+  'SHOP_MANAGER',
+  'STOREKEEPER',
+  // Backward-compatible role for pre-specialisation accounts.
+  'SHOP_USER',
+]);
 export const locationTypeEnum = pgEnum('location_type', ['CENTRAL', 'SHOP']);
 export const movementTypeEnum = pgEnum('movement_type', [
   'PURCHASE_RECEIPT',
@@ -30,6 +39,8 @@ export const movementTypeEnum = pgEnum('movement_type', [
   'RECOVERY_SALE',
   'WASTAGE',
   'ADJUSTMENT',
+  'RECLASSIFICATION_OUT',
+  'RECLASSIFICATION_IN',
 ]);
 export const machineEventStatusEnum = pgEnum('machine_event_status', [
   'PENDING_REVIEW',
@@ -38,7 +49,28 @@ export const machineEventStatusEnum = pgEnum('machine_event_status', [
   'REJECTED',
 ]);
 export const saleClassificationEnum = pgEnum('sale_classification', ['NORMAL', 'RECOVERY']);
-export const transferStatusEnum = pgEnum('transfer_status', ['CONFIRMED', 'CANCELLED']);
+export const transferStatusEnum = pgEnum('transfer_status', [
+  // CONFIRMED is retained for historical immediate transfers.
+  'CONFIRMED',
+  'CANCELLED',
+  'REQUESTED',
+  'APPROVED',
+  'REJECTED',
+  'DISPATCHED',
+  'RECEIVED',
+  'DISCREPANCY_REVIEW',
+]);
+export const stockRequirementStatusEnum = pgEnum('stock_requirement_status', [
+  'REQUESTED',
+  'PARTIALLY_APPROVED',
+  'APPROVED',
+  'REJECTED',
+  'DISPATCHED',
+  'RECEIVED',
+  'CANCELLED',
+]);
+export const receiptDecisionEnum = pgEnum('receipt_decision', ['ACCEPTED', 'REJECTED', 'ADJUSTED']);
+export const productStockClassEnum = pgEnum('product_stock_class', ['FRESH', 'DISCOUNTED']);
 export const notificationTypeEnum = pgEnum('notification_type', [
   'LOW_STOCK',
   'COLLECTOR_SYNC_FAILURE',
@@ -105,14 +137,26 @@ export const inventoryLocations = pgTable(
   ],
 );
 
-export const products = pgTable('products', {
-  id: uuid('id').primaryKey(),
-  name: varchar('name', { length: 160 }).notNull(),
-  productCode: varchar('product_code', { length: 64 }).notNull().unique(),
-  recoveryBasisPoints: bigint('recovery_basis_points', { mode: 'number' }).notNull(),
-  active: boolean('active').notNull().default(true),
-  ...auditColumns,
-});
+export const products = pgTable(
+  'products',
+  {
+    id: uuid('id').primaryKey(),
+    name: varchar('name', { length: 160 }).notNull(),
+    productCode: varchar('product_code', { length: 64 }).notNull().unique(),
+    recoveryBasisPoints: bigint('recovery_basis_points', { mode: 'number' }).notNull(),
+    stockClass: productStockClassEnum('stock_class').notNull().default('FRESH'),
+    freshProductId: uuid('fresh_product_id'),
+    active: boolean('active').notNull().default(true),
+    ...auditColumns,
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.freshProductId],
+      foreignColumns: [table.id],
+      name: 'products_fresh_product_id_products_id_fk',
+    }),
+  ],
+);
 
 export const productPrices = pgTable(
   'product_prices',
@@ -271,6 +315,7 @@ export const stockTransfers = pgTable(
     initiatedByUserId: uuid('initiated_by_user_id')
       .notNull()
       .references(() => users.id),
+    businessDate: date('business_date'),
     notes: text('notes'),
     confirmedAt: timestamp('confirmed_at', { withTimezone: true }).notNull(),
     ...auditColumns,
@@ -294,10 +339,91 @@ export const transferItems = pgTable(
       .notNull()
       .references(() => products.id),
     quantityGrams: bigint('quantity_grams', { mode: 'bigint' }).notNull(),
+    dispatchedGrams: bigint('dispatched_grams', { mode: 'bigint' }),
+    receivedGrams: bigint('received_grams', { mode: 'bigint' }),
+    receiptReason: varchar('receipt_reason', { length: 500 }),
   },
   (table) => [
     uniqueIndex('transfer_items_transfer_product_unique').on(table.transferId, table.productId),
     check('transfer_items_positive_quantity', sql`${table.quantityGrams} > 0`),
+  ],
+);
+
+/** Shop-originated request to the central hub. A request never changes stock by itself. */
+export const stockRequirements = pgTable(
+  'stock_requirements',
+  {
+    id: uuid('id').primaryKey(),
+    shopId: uuid('shop_id')
+      .notNull()
+      .references(() => shops.id),
+    status: stockRequirementStatusEnum('status').notNull().default('REQUESTED'),
+    requestedByUserId: uuid('requested_by_user_id')
+      .notNull()
+      .references(() => users.id),
+    reviewedByUserId: uuid('reviewed_by_user_id').references(() => users.id),
+    reviewReason: varchar('review_reason', { length: 500 }),
+    dispatchedTransferId: uuid('dispatched_transfer_id').references(() => stockTransfers.id),
+    requestedAt: timestamp('requested_at', { withTimezone: true }).notNull().defaultNow(),
+    reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+    ...auditColumns,
+  },
+  (table) => [
+    index('stock_requirements_shop_status_requested_index').on(
+      table.shopId,
+      table.status,
+      table.requestedAt,
+    ),
+  ],
+);
+
+export const stockRequirementItems = pgTable(
+  'stock_requirement_items',
+  {
+    id: uuid('id').primaryKey(),
+    requirementId: uuid('requirement_id')
+      .notNull()
+      .references(() => stockRequirements.id),
+    productId: uuid('product_id')
+      .notNull()
+      .references(() => products.id),
+    requestedGrams: bigint('requested_grams', { mode: 'bigint' }).notNull(),
+    approvedGrams: bigint('approved_grams', { mode: 'bigint' }),
+  },
+  (table) => [
+    uniqueIndex('stock_requirement_items_requirement_product_unique').on(
+      table.requirementId,
+      table.productId,
+    ),
+    check('stock_requirement_items_requested_positive', sql`${table.requestedGrams} > 0`),
+    check(
+      'stock_requirement_items_approved_nonnegative',
+      sql`${table.approvedGrams} is null or ${table.approvedGrams} >= 0`,
+    ),
+  ],
+);
+
+/** A receipt keeps the original dispatched amount immutable while recording the physical result. */
+export const transferReceipts = pgTable(
+  'transfer_receipts',
+  {
+    id: uuid('id').primaryKey(),
+    transferId: uuid('transfer_id')
+      .notNull()
+      .references(() => stockTransfers.id)
+      .unique(),
+    decision: receiptDecisionEnum('decision').notNull(),
+    receivedByUserId: uuid('received_by_user_id')
+      .notNull()
+      .references(() => users.id),
+    receivedAt: timestamp('received_at', { withTimezone: true }).notNull(),
+    reason: varchar('reason', { length: 500 }),
+    managementApprovedByUserId: uuid('management_approved_by_user_id').references(() => users.id),
+    managementApprovedAt: timestamp('management_approved_at', { withTimezone: true }),
+    ...auditColumns,
+  },
+  (table) => [
+    index('transfer_receipts_transfer_decision_index').on(table.transferId, table.decision),
   ],
 );
 
@@ -428,6 +554,30 @@ export const wastageRecords = pgTable(
     ...auditColumns,
   },
   (table) => [check('wastage_records_positive_quantity', sql`${table.quantityGrams} > 0`)],
+);
+
+/** Immutable metadata for mandatory waste images. The bytes live in private object storage. */
+export const wastageEvidence = pgTable(
+  'wastage_evidence',
+  {
+    id: uuid('id').primaryKey(),
+    wastageRecordId: uuid('wastage_record_id')
+      .notNull()
+      .references(() => wastageRecords.id)
+      .unique(),
+    objectKey: varchar('object_key', { length: 512 }).notNull().unique(),
+    contentType: varchar('content_type', { length: 100 }).notNull(),
+    byteSize: bigint('byte_size', { mode: 'number' }).notNull(),
+    sha256: varchar('sha256', { length: 64 }).notNull(),
+    uploadedByUserId: uuid('uploaded_by_user_id')
+      .notNull()
+      .references(() => users.id),
+    ...auditColumns,
+  },
+  (table) => [
+    check('wastage_evidence_positive_byte_size', sql`${table.byteSize} > 0`),
+    check('wastage_evidence_sha256_hex', sql`${table.sha256} ~ '^[0-9a-f]{64}$'`),
+  ],
 );
 
 export const expenses = pgTable(

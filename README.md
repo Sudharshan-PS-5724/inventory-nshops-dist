@@ -239,7 +239,7 @@ Use a staging Supabase project before production.
 4. Put the PostgreSQL connection string in `DATABASE_URL` inside `apps/api/.env`.
 5. Put the Auth issuer and JWKS URL in `SUPABASE_JWT_ISSUER` and `SUPABASE_JWKS_URL`.
 6. Put only the public project URL and public anonymous key in `apps/mobile/.env`.
-7. Review and apply the three SQL files in `apps/api/drizzle/` to a fresh staging database, in filename order.
+7. Review and apply the five SQL files in `apps/api/drizzle/` to a fresh staging database, in filename order.
 8. Create the corresponding application user and administrator role data.
 9. Test mobile sign-in and server-side role resolution.
 

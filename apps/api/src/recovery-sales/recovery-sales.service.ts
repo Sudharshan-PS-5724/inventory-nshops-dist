@@ -24,7 +24,6 @@ import {
 } from '../idempotency/idempotency.service.js';
 import {
   calculateAvailableGrams,
-  calculateRecoveryPricePaisePerKg,
   InsufficientInventoryError,
   requireSufficientInventory,
 } from '../inventory/domain/inventory-accounting.js';
@@ -60,7 +59,10 @@ export class RecoverySalesService {
     input: RecordRecoverySaleInput,
   ) {
     const [location] = await tx
-      .select({ shopId: inventoryLocations.shopId })
+      .select({
+        shopId: inventoryLocations.shopId,
+        locationType: inventoryLocations.locationType,
+      })
       .from(inventoryLocations)
       .where(eq(inventoryLocations.id, input.locationId));
     if (!location) throw new NotFoundException('Inventory location was not found.');
@@ -70,7 +72,11 @@ export class RecoverySalesService {
 
     await validateLocationDate(tx, location.shopId, input.businessDate, input.soldAt);
     const productRows = await tx
-      .select({ id: products.id, recoveryBasisPoints: products.recoveryBasisPoints })
+      .select({
+        id: products.id,
+        stockClass: products.stockClass,
+        recoveryBasisPoints: products.recoveryBasisPoints,
+      })
       .from(products)
       .where(
         and(
@@ -84,6 +90,11 @@ export class RecoverySalesService {
     if (productRows.length !== input.items.length)
       throw new NotFoundException('One or more active products were not found.');
     const productsById = new Map(productRows.map((product) => [product.id, product]));
+    if ([...productsById.values()].some((product) => product.stockClass !== 'DISCOUNTED')) {
+      throw new BadRequestException(
+        'Discounted resale may only sell a product classified as discounted stock.',
+      );
+    }
     for (const item of [...input.items].sort((left, right) =>
       left.productId.localeCompare(right.productId),
     ))
@@ -100,7 +111,7 @@ export class RecoverySalesService {
           eq(openingStockSubmissions.businessDate, input.businessDate),
         ),
       );
-    if (!submission)
+    if (!submission && location.locationType === 'SHOP')
       throw new ConflictException('Opening stock has not been submitted for this business date.');
     const saleId = randomUUID();
     const rows: {
@@ -114,15 +125,17 @@ export class RecoverySalesService {
     }[] = [];
     for (const item of input.items) {
       const [opening, movements, price] = await Promise.all([
-        tx
-          .select({ quantityGrams: openingStockLines.quantityGrams })
-          .from(openingStockLines)
-          .where(
-            and(
-              eq(openingStockLines.submissionId, submission.id),
-              eq(openingStockLines.productId, item.productId),
-            ),
-          ),
+        submission
+          ? tx
+              .select({ quantityGrams: openingStockLines.quantityGrams })
+              .from(openingStockLines)
+              .where(
+                and(
+                  eq(openingStockLines.submissionId, submission.id),
+                  eq(openingStockLines.productId, item.productId),
+                ),
+              )
+          : Promise.resolve([]),
         tx
           .select({ quantityGrams: inventoryMovements.quantityGrams })
           .from(inventoryMovements)
@@ -130,7 +143,9 @@ export class RecoverySalesService {
             and(
               eq(inventoryMovements.locationId, input.locationId),
               eq(inventoryMovements.productId, item.productId),
-              eq(inventoryMovements.businessDate, input.businessDate),
+              location.locationType === 'CENTRAL'
+                ? lte(inventoryMovements.businessDate, input.businessDate)
+                : eq(inventoryMovements.businessDate, input.businessDate),
             ),
           ),
         tx
@@ -163,16 +178,15 @@ export class RecoverySalesService {
           throw new ConflictException({ code: 'INSUFFICIENT_STOCK', message: error.message });
         throw error;
       }
-      const recoveryPrice = calculateRecoveryPricePaisePerKg(
-        price[0].paisePerKg,
-        product.recoveryBasisPoints,
-      );
+      // Discounted inventory has its own administrator-controlled selling price.
+      // Keep the legacy recovery fields as a 100% snapshot for historical rows.
+      const recoveryPrice = price[0].paisePerKg;
       rows.push({
         id: randomUUID(),
         productId: item.productId,
         quantityGrams: item.quantityGrams,
         normalPricePaisePerKg: price[0].paisePerKg,
-        recoveryBasisPoints: product.recoveryBasisPoints,
+        recoveryBasisPoints: 10_000,
         unitPricePaisePerKg: recoveryPrice,
         lineAmountPaise: (item.quantityGrams * recoveryPrice + 500n) / 1000n,
       });

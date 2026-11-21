@@ -1,4 +1,4 @@
-import { Body, Controller, Headers, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Headers, Param, Post, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiCreatedResponse,
@@ -31,5 +31,43 @@ export class TransfersController {
     @Body() body: unknown,
   ) {
     return this.transfersService.create(actor, idempotencyKey, body);
+  }
+
+  @Post('dispatch')
+  @ApiHeader({ name: 'Idempotency-Key', required: true })
+  @ApiOperation({ summary: 'Dispatch stock, deducting only the source inventory.' })
+  dispatch(
+    @CurrentActor() actor: AuthenticatedActor,
+    @Headers('idempotency-key') key: string | undefined,
+    @Body() body: unknown,
+  ) {
+    return this.transfersService.dispatch(actor, key, body);
+  }
+
+  @Post(':transferId/receipt')
+  @ApiHeader({ name: 'Idempotency-Key', required: true })
+  @ApiOperation({
+    summary: 'Record physical receipt and add only received quantity to the destination.',
+  })
+  receipt(
+    @CurrentActor() actor: AuthenticatedActor,
+    @Headers('idempotency-key') key: string | undefined,
+    @Param('transferId') transferId: string,
+    @Body() body: unknown,
+  ) {
+    return this.transfersService.receive(actor, key, transferId, body);
+  }
+
+  @Post(':transferId/approve-discrepancy')
+  @ApiHeader({ name: 'Idempotency-Key', required: true })
+  @ApiOperation({
+    summary: 'Close a reviewed transfer discrepancy without changing historic quantities.',
+  })
+  approveDiscrepancy(
+    @CurrentActor() actor: AuthenticatedActor,
+    @Headers('idempotency-key') key: string | undefined,
+    @Param('transferId') transferId: string,
+  ) {
+    return this.transfersService.approveDiscrepancy(actor, key, transferId);
   }
 }

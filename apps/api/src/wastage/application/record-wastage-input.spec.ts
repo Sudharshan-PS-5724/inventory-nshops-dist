@@ -9,8 +9,21 @@ describe('record wastage input', () => {
       businessDate: '2026-10-10',
       quantityGrams: '1250',
       occurredAt: '2026-10-10T10:30:00.000Z',
+      reason: 'Rotten after inspection',
     });
     expect(parsed.quantityGrams).toBe(1250n);
     expect(parsed.occurredAt).toEqual(new Date('2026-10-10T10:30:00.000Z'));
+  });
+
+  it('requires a waste reason', () => {
+    expect(
+      recordWastageInputSchema.safeParse({
+        locationId: '4a43bdc3-a730-4f75-bb54-da0e3314d45d',
+        productId: '7f5d7881-0d9d-4221-a968-cfd47b4e3e54',
+        businessDate: '2026-10-10',
+        quantityGrams: '1250',
+        occurredAt: '2026-10-10T10:30:00.000Z',
+      }).success,
+    ).toBe(false);
   });
 });

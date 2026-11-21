@@ -7,7 +7,7 @@ export const recordWastageInputSchema = z.object({
   businessDate: z.iso.date(),
   quantityGrams: exactInteger.pipe(z.bigint().positive()),
   occurredAt: z.iso.datetime({ offset: true }).transform((value) => new Date(value)),
-  reason: z.string().trim().min(1).max(320).optional(),
+  reason: z.string().trim().min(1).max(320),
 });
 
 export type RecordWastageInput = z.infer<typeof recordWastageInputSchema>;

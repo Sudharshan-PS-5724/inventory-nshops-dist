@@ -49,7 +49,7 @@ See [consistency-fixes.md](consistency-fixes.md) for the current verification an
 
 ### Not started
 
-- Normal machine-sale ingestion, collector pairing/upload, notifications and reports/PDF generation.
+- Verified Dahua parser, automatic collector upload, notifications and reports/PDF generation.
 - Remaining live mobile screens, including purchase editing, user/shop administration, histories, reports and adjustments. These still have demo designs only.
 
 ### Blocking external dependencies
